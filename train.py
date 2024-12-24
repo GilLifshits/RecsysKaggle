@@ -193,7 +193,7 @@ def predict(model, test_users, test_reviews, top_k=10):
         # Assuming user_row is [user_id, accommodation_id, f1, f2, ..., fN]
         user_features_vals = [
             float(value) if isinstance(value, (int, float)) else 0
-            for value in user_row.values[2:]
+            for value in user_row.values[:]
         ]
 
         user_features = torch.tensor(
