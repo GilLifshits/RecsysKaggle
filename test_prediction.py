@@ -2,26 +2,21 @@ import pandas as pd
 import torch
 from tqdm import tqdm
 
-
 @torch.no_grad()
 def predict(model, test_combinations, test_reviews, top_k=10, batch_size=512):
     """
-    Optimized for GPU inference: predicts top 'top_k' review IDs for each test combination.
+    For each (accommodation_id, user_id) pair in test_combinations,
+    return a ranked list of the top 'top_k' review IDs predicted by the model.
 
-    Parameters:
-    - model: PyTorch model.
-    - test_combinations: DataFrame with (accommodation_id, user_id) pairs and features.
-    - test_reviews: DataFrame with review_id, review_positive, and review_negative columns.
-    - top_k: Number of top reviews to return for each combination.
-    - batch_size: Number of reviews to process in a single batch.
+    Uses mini-batching for reviews to leverage GPU more efficiently.
 
-    Returns:
-    - result_df: DataFrame with ranked top_k reviews for each test combination.
+    The output DataFrame will have 12 columns total:
+    ID, accommodation_id, user_id, review_1, ..., review_10
     """
-    model.eval()  # Ensure the model is in evaluation mode
-    device = next(model.parameters()).device  # Get the device of the model
+    model.eval()
+    device = next(model.parameters()).device
 
-    # Pre-build tensors for all reviews
+    # Pre-build the list of all reviews (strings) and review_ids
     all_review_texts = [
         f"{row['review_positive']} {row['review_negative']}"
         for _, row in test_reviews.iterrows()
@@ -31,65 +26,75 @@ def predict(model, test_combinations, test_reviews, top_k=10, batch_size=512):
 
     results = []
 
-    # Outer progress bar for combinations
+    # Initialize outer progress bar
     with tqdm(total=len(test_combinations), desc="Processing Combinations", dynamic_ncols=True) as comb_pbar:
         for _, comb_row in test_combinations.iterrows():
-            # Convert row values to float and prepare combination feature tensor
+            # Convert row values to float (or handle them however your model expects)
             comb_features_vals = [
-                float(value) if isinstance(value, (int, float)) else 0.0
+                float(value) if isinstance(value, (int, float)) else 0
                 for value in comb_row.values[:]
             ]
-            comb_features_tensor = torch.tensor(
-                comb_features_vals, dtype=torch.float32, device=device
-            ).unsqueeze(0)  # Shape: (1, num_features)
 
-            # Batch-wise processing of reviews
+            # Make a single tensor of shape (1, num_features) on the correct device
+            comb_features_tensor = torch.tensor(
+                comb_features_vals, dtype=torch.float32
+            ).unsqueeze(0).to(device)
+
+            # We'll accumulate probabilities in a list, then sort once at the end
             probs_list = []
+
+            # Process the reviews in mini-batches with progress bar for reviews
             with tqdm(total=n_reviews, desc="Processing Reviews", dynamic_ncols=True, leave=False) as review_pbar:
                 for start_idx in range(0, n_reviews, batch_size):
-                    end_idx = min(start_idx + batch_size, n_reviews)
+                    end_idx = start_idx + batch_size
 
-                    # Extract batch review texts
+                    # Slice the texts for this mini-batch
                     texts_batch = all_review_texts[start_idx:end_idx]
                     batch_size_actual = len(texts_batch)
 
-                    # Duplicate combination tensor for batch size
+                    # Repeat the combination features to match this mini-batch size
                     comb_features_batch = comb_features_tensor.repeat(batch_size_actual, 1)
 
-                    # Forward pass: predict logits
-                    logits = model(comb_features_batch, texts_batch)  # Shape: (batch_size,)
-                    probs = torch.sigmoid(logits).squeeze(dim=-1)  # Shape: (batch_size,)
+                    # Forward pass for this mini-batch
+                    logits = model(comb_features_batch, texts_batch)  # shape: (batch_size,) or (batch_size, 1)
+                    probs = torch.sigmoid(logits).squeeze(dim=-1)     # shape: (batch_size,)
 
-                    # Append probabilities (detached to CPU)
-                    probs_list.append(probs.cpu())
+                    # Move to CPU once per mini-batch
+                    probs_cpu = probs.detach().cpu()
+                    probs_list.append(probs_cpu)
 
-                    # Update inner progress bar
+                    # Update review progress bar
                     review_pbar.update(batch_size_actual)
 
-            # Concatenate all probabilities
+            # Concatenate probabilities for all mini-batches: shape (n_reviews,)
             all_probs = torch.cat(probs_list).numpy()
 
-            # Pair review IDs with probabilities and sort
-            similarities = sorted(zip(all_review_ids, all_probs), key=lambda x: x[1], reverse=True)
+            # Pair each review_id with the predicted probability
+            similarities = list(zip(all_review_ids, all_probs))
 
-            # Extract top_k review IDs
-            top_review_ids = [review_id for review_id, _ in similarities[:top_k]]
+            # Sort in descending order by probability
+            similarities.sort(key=lambda x: x[1], reverse=True)
 
-            # Append result row
-            results.append((
-                comb_row["accommodation_id"],
-                comb_row["user_id"],
-                *top_review_ids
-            ))
+            # Take top_k
+            top_review_ids = [review_id for (review_id, _) in similarities[:top_k]]
+
+            # Collect this row's results
+            results.append(
+                (
+                    comb_row["accommodation_id"],
+                    comb_row["user_id"],
+                    *top_review_ids
+                )
+            )
 
             # Update outer progress bar
             comb_pbar.update(1)
 
-    # Create the final DataFrame
+    # Build the final DataFrame
     columns = ["accommodation_id", "user_id"] + [f"review_{i}" for i in range(1, top_k + 1)]
     result_df = pd.DataFrame(results, columns=columns)
 
-    # Add an ID column
+    # Insert 'ID' as the first column (index from 1)
     result_df.insert(0, "ID", range(1, len(result_df) + 1))
 
     return result_df
