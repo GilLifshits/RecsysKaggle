@@ -64,7 +64,7 @@ def predict(model, test_combinations, test_reviews, top_k=10, batch_size=512):
 
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    batch_size = 32  # Define the batch size
+    batch_size = 512  # Define the batch size
     results = []
 
     top_k = 10  # Number of top reviews to retrieve

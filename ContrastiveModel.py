@@ -48,6 +48,6 @@ class ContrastiveModel(nn.Module):
         similarity = self.cos(user_embedding, review_embedding)
 
         # Scale similarity to a more logit-friendly range for BCEWithLogitsLoss
-        logits = similarity * 5.0  # transforms [-1,1] to roughly [-5,5]
-        # return logits, user_embedding, review_embedding
-        return logits
+        scaled_similarity = similarity * 5.0  # transforms [-1,1] to roughly [-5,5]
+        return scaled_similarity, user_embedding, review_embedding
+        # return scaled_similarity
