@@ -49,4 +49,5 @@ class ContrastiveModel(nn.Module):
 
         # Scale similarity to a more logit-friendly range for BCEWithLogitsLoss
         logits = similarity * 5.0  # transforms [-1,1] to roughly [-5,5]
+        # return logits, user_embedding, review_embedding
         return logits

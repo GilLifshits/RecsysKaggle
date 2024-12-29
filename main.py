@@ -10,6 +10,15 @@ from training_loop import train_model
 
 if __name__ == "__main__":
 
+    # trained_model = ContrastiveModel(13).to("cuda")
+    #
+    # sim, user_embedding, review_embedding = trained_model(user_features="gil", review_content="rev")
+    # print(sim)
+    # print(user_embedding)
+    # print(review_embedding)
+    #
+    # exit(0)
+
     if torch.cuda.is_available():
         print(f"CUDA Version: {torch.version.cuda}")
         print(f"Number of CUDA Devices: {torch.cuda.device_count()}")
@@ -65,6 +74,6 @@ if __name__ == "__main__":
         trained_model = ContrastiveModel(user_feature_size).to(device)
 
     # Predict on the test set
-    result_df = predict(trained_model, test_users, test_reviews[:10000])
+    result_df = predict(trained_model, test_users, test_reviews, batch_size=512)
     result_df.to_csv("submission.csv", index=False)
     print("Saved predictions to submission.csv")
