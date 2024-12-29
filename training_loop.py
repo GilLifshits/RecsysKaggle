@@ -13,16 +13,13 @@ def train_model(train_loader, model, criterion, optimizer, device):
         review_content = batch['review_content']
 
         optimizer.zero_grad()
-        logits = model(user_features, review_content)
+        scaled_similarity, user_embedding, review_embedding = model(user_features, review_content)
 
         # For demonstration, all pairs are "similar" => label = 1.0
-        targets = torch.ones(len(logits), device=device)
+        targets = torch.ones(len(scaled_similarity), device=device)
 
-        loss = criterion(logits, targets)
+        loss = criterion(scaled_similarity, targets)
         loss.backward()
-
-        # (Optional) Gradient clipping
-        # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 
         optimizer.step()
         total_loss += loss.item()

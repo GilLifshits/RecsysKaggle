@@ -3,3 +3,4 @@ train/
 val/
 .venv/
 model/
+.idea/

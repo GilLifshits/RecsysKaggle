@@ -6,8 +6,8 @@ from transformers import AutoTokenizer, AutoModel
 class ContrastiveModel(nn.Module):
     def __init__(self, user_feature_size):
         super(ContrastiveModel, self).__init__()
-        self.tokenizer = AutoTokenizer.from_pretrained("model")
-        self.bert = AutoModel.from_pretrained("model")
+        self.tokenizer = AutoTokenizer.from_pretrained("bert_model")
+        self.bert = AutoModel.from_pretrained("bert_model")
 
         # Use the actual hidden size from the model config rather than hardcoding
         hidden_size = self.bert.config.hidden_size
@@ -18,9 +18,16 @@ class ContrastiveModel(nn.Module):
         # Cosine similarity for user and review embeddings
         self.cos = nn.CosineSimilarity(dim=1)
 
+        # Initialize weights to avoid extreme values
+        nn.init.xavier_uniform_(self.fc_user.weight)
+        nn.init.xavier_uniform_(self.fc_review.weight)
+
     def forward(self, user_features, review_content):
         # user_features: (batch_size, user_feature_size)
         # review_content: list of strings (length batch_size)
+
+        # Ensure user features are valid
+        user_features = torch.nan_to_num(user_features, nan=0.0, posinf=1.0, neginf=-1.0)
 
         user_embedding = torch.relu(self.fc_user(user_features))  # -> (batch_size, 256)
 
@@ -33,8 +40,7 @@ class ContrastiveModel(nn.Module):
             return_tensors="pt"
         ).to(user_features.device)
 
-        # If the batch sizes don't match for some reason, expand (rare corner case).
-        # Typically, you won't need this if your collate_fn is correct.
+        # Handle mismatched batch sizes
         if review_tokens['input_ids'].shape[0] != user_features.shape[0]:
             review_tokens = {
                 key: val.expand(user_features.shape[0], -1) for key, val in review_tokens.items()
@@ -44,10 +50,17 @@ class ContrastiveModel(nn.Module):
         review_output = self.bert(**review_tokens).last_hidden_state[:, 0, :]
         review_embedding = torch.relu(self.fc_review(review_output))  # -> (batch_size, 256)
 
+        # Normalize embeddings to avoid extreme cosine values
+        user_embedding = nn.functional.normalize(user_embedding, p=2, dim=1)
+        review_embedding = nn.functional.normalize(review_embedding, p=2, dim=1)
+
         # Cosine similarity in [-1, +1]
         similarity = self.cos(user_embedding, review_embedding)
 
-        # Scale similarity to a more logit-friendly range for BCEWithLogitsLoss
+        # Clamp similarity to avoid NaN during scaling
+        similarity = torch.clamp(similarity, min=-1.0, max=1.0)
+
+        # Scale similarity to a logit-friendly range for BCEWithLogitsLoss
         scaled_similarity = similarity * 5.0  # transforms [-1,1] to roughly [-5,5]
+
         return scaled_similarity, user_embedding, review_embedding
-        # return scaled_similarity
