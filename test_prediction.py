@@ -1,71 +1,107 @@
 import pandas as pd
 import torch
 from tqdm import tqdm
+import torch.nn as nn
+import torch.nn.functional as F
+
 
 @torch.no_grad()
 def predict(model, test_combinations, test_reviews, top_k=10, batch_size=512):
-    """
-    Predict the top_k reviews for each (accommodation_id, user_id) pair in test_combinations,
-    filtering only by matching accommodation_id.
-
-    Args:
-        model: Trained PyTorch model for predictions.
-        test_combinations: DataFrame with columns ['accommodation_id', 'user_id'].
-        test_reviews: DataFrame with columns ['accommodation_id', 'review_id', 'review_positive', 'review_negative'].
-        top_k: Number of top reviews to return for each combination.
-        batch_size: Batch size for processing reviews.
-
-    Returns:
-        DataFrame with columns ['ID', 'accommodation_id', 'user_id', 'review_1', ..., 'review_top_k'].
-    """
     device = next(model.parameters()).device
     model.eval()
 
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    # Dictionary to store user embeddings
+    review_embeddings_dict = {}
+
+    # Process data in batches
+    num_samples = len(test_reviews)
+    for start_idx in tqdm(range(0, num_samples, batch_size), desc="Processing Batches"):
+        end_idx = min(start_idx + batch_size, num_samples)
+        batch = test_reviews.iloc[start_idx:end_idx]
+
+        batch_size = len(batch)  # Assuming batch is a collection like a list or DataFrame
+        comb_features = torch.rand((batch_size, 13), dtype=torch.float32).to(device)
+
+        reviews = [row for row in batch["review_positive"]]  # TODO: change review
+
+        # Forward pass through the model
+        _, _, review_embeddings = model(comb_features, reviews)
+
+        # Save user embeddings to the dictionary
+        for i, review_id in enumerate(batch['review_id']):
+            review_embeddings_dict[review_id] = review_embeddings[i].cpu().numpy()
+
+
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    # Dictionary to store user embeddings
+    user_embeddings_dict = {}
+
+    # Process data in batches
+    num_samples = len(test_combinations)
+    for start_idx in tqdm(range(0, num_samples, batch_size), desc="Processing Batches"):
+        end_idx = min(start_idx + batch_size, num_samples)
+        batch = test_combinations.iloc[start_idx:end_idx]
+
+        # Prepare batch combination features tensor
+        comb_features_vals = [
+            [float(value) if isinstance(value, (int, float)) else 0 for value in row]
+            for row in batch.values
+        ]
+        comb_features = torch.tensor(comb_features_vals, dtype=torch.float32).to(device)
+
+        # Dummy reviews placeholder for the batch
+        reviews = ["dummy review"] * len(batch)
+
+        # Forward pass through the model
+        scaled_similarities, user_embeddings_batch, review_embeddings = model(comb_features, reviews)
+
+        # Save user embeddings to the dictionary
+        for i, user_id in enumerate(batch['user_id']):
+            user_embeddings_dict[user_id] = user_embeddings_batch[i].cpu().numpy()
+
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    batch_size = 32  # Define the batch size
     results = []
 
-    for _, comb_row in tqdm(test_combinations.iterrows(), total=len(test_combinations), desc="Processing Combinations"):
-        acc_id = comb_row["accommodation_id"]
-        user_id = comb_row["user_id"]
+    top_k = 10  # Number of top reviews to retrieve
 
-        # Filter reviews by accommodation_id
-        reviews_subset = test_reviews[test_reviews["accommodation_id"] == acc_id]
-        if reviews_subset.empty:
-            results.append((acc_id, user_id, *([None] * top_k)))
-            continue
+    for _, comb in tqdm(test_combinations.iterrows(), total=len(test_combinations), desc="Processing combinations"):
+        user_id, accommodation_id = comb["user_id"], comb["accommodation_id"]
 
-        # Prepare review texts and IDs
-        all_review_texts = [
-            f"{row['review_positive']} {row['review_negative']}"
-            for _, row in reviews_subset.iterrows()
+        sub_test_reviews = test_reviews.loc[test_reviews["accommodation_id"] == accommodation_id]
+        review_ids = sub_test_reviews["review_id"].tolist()
+        sub_test_reviews_embeddings = [
+            review_embeddings_dict[review_id] for review_id in review_ids
         ]
-        all_review_ids = reviews_subset["review_id"].tolist()
 
-        # Prepare combination features tensor
-        comb_features_vals = [
-            float(value) if isinstance(value, (int, float)) else 0
-            for value in comb_row.values[:]
-        ]
-        comb_features = torch.tensor(
-            comb_features_vals, dtype=torch.float32
-        ).unsqueeze(0).to(device)
+        current_user_embedding = torch.tensor(user_embeddings_dict[user_id]).unsqueeze(0)
 
-        # Compute probabilities in batches
-        probs = []
-        for i in range(0, len(all_review_texts), batch_size):
-            batch_texts = all_review_texts[i:i + batch_size]
-            batch_features = comb_features.repeat(len(batch_texts), 1)
-            logits = model(batch_features, batch_texts)
-            probs.append(torch.sigmoid(logits).squeeze(-1).cpu().numpy())
+        if sub_test_reviews_embeddings:  # Ensure there is at least one embedding
+            sub_test_reviews_embeddings = torch.tensor(sub_test_reviews_embeddings)
 
-        # Get top_k reviews by probability
-        all_probs = torch.cat([torch.tensor(p) for p in probs]).numpy()
-        top_review_ids = [rid for rid, _ in sorted(zip(all_review_ids, all_probs), key=lambda x: x[1], reverse=True)[:top_k]]
+            similarities = []
+            for i in range(0, len(sub_test_reviews_embeddings), batch_size):
+                batch_embeddings = sub_test_reviews_embeddings[i:i + batch_size]
+                batch_review_ids = review_ids[i:i + batch_size]
+                similarity = F.cosine_similarity(
+                    current_user_embedding, batch_embeddings
+                )
+                similarities.extend(zip(batch_review_ids, similarity.tolist()))
 
-        # Append results
-        results.append((acc_id, user_id, *top_review_ids))
+            # Get top 10 reviews by similarity
+            top_reviews = sorted(similarities, key=lambda x: x[1], reverse=True)[:top_k]
+            top_review_ids = [review_id for review_id, _ in top_reviews]
+            results.append([accommodation_id, user_id] + top_review_ids)
 
     # Create final DataFrame
     columns = ["accommodation_id", "user_id"] + [f"review_{i}" for i in range(1, top_k + 1)]
     result_df = pd.DataFrame(results, columns=columns)
     result_df.insert(0, "ID", range(1, len(result_df) + 1))
+
     return result_df
+
+
