@@ -31,7 +31,7 @@ class ContrastiveModel(nn.Module):
 
         user_embedding = torch.relu(self.fc_user(user_features))  # -> (batch_size, 256)
 
-        review_content = [str(review) for review in review_content]
+        # review_content = [str(review) for review in review_content]
 
         # Tokenize reviews
         review_tokens = self.tokenizer(
