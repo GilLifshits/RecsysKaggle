@@ -31,11 +31,13 @@ class ContrastiveModel(nn.Module):
 
         user_embedding = torch.relu(self.fc_user(user_features))  # -> (batch_size, 256)
 
+        review_content = [str(review) for review in review_content]
+
         # Tokenize reviews
         review_tokens = self.tokenizer(
             review_content,
             truncation=True,
-            padding=True,
+            padding="max_length",
             max_length=512,
             return_tensors="pt"
         ).to(user_features.device)
@@ -61,6 +63,7 @@ class ContrastiveModel(nn.Module):
         similarity = torch.clamp(similarity, min=-1.0, max=1.0)
 
         # Scale similarity to a logit-friendly range for BCEWithLogitsLoss
-        scaled_similarity = similarity * 5.0  # transforms [-1,1] to roughly [-5,5]
+        # scaled_similarity = similarity * 5.0  # transforms [-1,1] to roughly [-5,5]
+        scaled_similarity = similarity
 
         return scaled_similarity, user_embedding, review_embedding

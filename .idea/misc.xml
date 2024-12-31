@@ -3,5 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="Python 3.9 (RecsysKaggle)" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="Remote Python 3.9.21 (sftp://gillif@132.72.67.215:22/home/gillif/.conda/envs/gpu_env/bin/python)" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="Remote Python 3.9.21 (sftp://gillif@132.72.65.249:22/home/gillif/.conda/envs/gpu_env/bin/python)" project-jdk-type="Python SDK" />
 </project>

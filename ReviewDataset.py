@@ -39,7 +39,10 @@ class ReviewDataset(Dataset):
 
         return {
             'user_features': user_features.to_dict(),
-            'review_content': f"{review_content['review_positive']} {review_content['review_negative']}"
+            # 'review_content': f"{review_content['review_title']} {review_content['review_positive']} {review_content['review_negative']}"
+            'review_content': str(review_content['review_title'].fillna('') + ' ' +
+                               review_content['review_positive'].fillna('') + ' ' +
+                               review_content['review_negative'].fillna(''))
         }
 
 

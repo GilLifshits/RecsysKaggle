@@ -62,7 +62,7 @@ def train_contrastive_model(device, train_users, train_reviews, train_matches, u
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-6)
 
     # Train model
-    epochs = 10
+    epochs = 7
     for epoch in range(epochs):
         print(f"Epoch {epoch + 1}/{epochs}")
         epoch_loss, trained_model = train_model(train_loader, model, criterion, optimizer, device)

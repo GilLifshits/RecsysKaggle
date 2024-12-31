@@ -1,54 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="gillif@132.72.67.215:22 password (2)" exclude=".venv;train;val;test;.svn;.cvs;.idea;.DS_Store;.git;.hg;*.hprof;*.pyc;" remoteFilesAllowedToDisappearOnAutoupload="false" confirmBeforeUploading="false">
+  <component name="PublishConfigData" autoUpload="Always" serverName="gillif@132.72.65.249:22 password" exclude=".venv;train;val;test;.svn;.cvs;.idea;.DS_Store;.git;.hg;*.hprof;*.pyc;" remoteFilesAllowedToDisappearOnAutoupload="false" confirmBeforeUploading="false">
     <option name="confirmBeforeUploading" value="false" />
     <serverData>
-      <paths name="gillif@132.72.66.155:22 password">
-        <serverdata>
-          <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="gillif@132.72.66.167:22 password">
-        <serverdata>
-          <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="gillif@132.72.67.215:22 password">
+      <paths name="gillif@132.72.65.249:22 password">
         <serverdata>
           <mappings>
             <mapping deploy="home/gillif/recsys_kaggle" local="$PROJECT_DIR$" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="gillif@132.72.67.215:22 password (2)">
-        <serverdata>
-          <mappings>
-            <mapping deploy="home/gillif/recsys_kaggle" local="$PROJECT_DIR$" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="gillif@132.72.67.225:22 password">
-        <serverdata>
-          <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="gillif@132.72.67.229:22 password">
-        <serverdata>
-          <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="gillif@132.72.67.229:22 password (2)">
-        <serverdata>
-          <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
