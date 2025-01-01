@@ -28,41 +28,55 @@ class ReviewDataset(Dataset):
         accommodation_id = match['accommodation_id']
         review_id = match['review_id']
 
-        user_features = self.users[
-            (self.users['user_id'] == user_id) &
-            (self.users['accommodation_id'] == accommodation_id)
-            ].iloc[0]
+        # make sure they exist
+        user_features = self.users[(self.users['user_id'] == user_id) & (self.users['accommodation_id'] == accommodation_id)].iloc[0]
+        review_content = self.reviews[self.reviews['review_id'] == review_id].iloc[0]
 
-        review_content = self.reviews[
-            self.reviews['review_id'] == review_id
-            ].iloc[0]
+        # user features textual representation
+        user_features_textual_representation = (f"Guest type: {user_features['guest_type'].fillna('')} "
+                                         f"Guest country: {user_features['guest_country'].fillna('')} "
+                                         f"Room nights: {user_features['room_nights'].fillna('')} "
+                                         f"Month: {user_features['month'].fillna('')} "
+                                         f"Accommodation type: {user_features['accommodation_type'].fillna('')} "
+                                         f"Accommodation country: {user_features['accommodation_country'].fillna('')}")
+
+        # Review textual representation
+        review_textual_representation = (f"Review title: {review_content['review_title'].fillna('')} "
+                                         f"Review positive: {review_content['review_positive'].fillna('')} "
+                                         f"Review negative: {review_content['review_negative'].fillna('')} "
+                                         f"Review score: {review_content['review_score'].fillna('')}")
 
         return {
-            'user_features': user_features.to_dict(),
-            # 'review_content': f"{review_content['review_title']} {review_content['review_positive']} {review_content['review_negative']}"
-            'review_content': str(review_content['review_title'].fillna('') + ' ' +
-                               review_content['review_positive'].fillna('') + ' ' +
-                               review_content['review_negative'].fillna(''))
+            'user_features': user_features_textual_representation,
+            'review_content': review_textual_representation
         }
 
 
 def custom_collate_fn(batch):
-    user_features = []
-    review_content = []
+    user_features, review_content = [], []
 
     for item in batch:
-        features = []
-        for value in item['user_features'].values():
-            # Convert everything to float if possible, else zero
-            try:
-                features.append(float(value))
-            except ValueError:
-                features.append(0)
-        user_features.append(features)
+        user_features.append(item['user_features'])
         review_content.append(item['review_content'])
 
-    user_features_tensor = torch.tensor(user_features, dtype=torch.float32)
+    # user_features_tensor = torch.tensor(user_features, dtype=torch.float32)
     return {
-        'user_features': user_features_tensor,
+        'user_features': user_features,
         'review_content': review_content
     }
+
+    # for item in batch:
+    #     features = []
+    #     for value in item['user_features'].values():
+    #         try:
+    #             features.append(float(value))
+    #         except ValueError:
+    #             features.append(0)
+    #     user_features.append(features)
+    #     review_content.append(item['review_content'])
+    #
+    # user_features_tensor = torch.tensor(user_features, dtype=torch.float32)
+    # return {
+    #     'user_features': user_features_tensor,
+    #     'review_content': review_content
+    # }

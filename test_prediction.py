@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 
 @torch.no_grad()
-def predict(model, test_combinations, test_reviews, top_k=10, batch_size=512):
+def predict(model, test_combinations, test_reviews, top_k=10, batch_size=64):
     device = next(model.parameters()).device
     model.eval()
 
@@ -67,10 +67,7 @@ def predict(model, test_combinations, test_reviews, top_k=10, batch_size=512):
 
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    batch_size = 512  # Define the batch size
     results = []
-
-    top_k = 10  # Number of top reviews to retrieve
 
     for _, comb in tqdm(test_combinations.iterrows(), total=len(test_combinations), desc="Processing combinations"):
         user_id, accommodation_id = comb["user_id"], comb["accommodation_id"]
