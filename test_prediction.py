@@ -7,7 +7,7 @@ import torch.nn.functional as F
 
 @torch.no_grad()
 def predict(model, test_combinations, test_reviews, top_k=10, batch_size=64):
-    device = next(model.parameters()).device
+
     model.eval()
 
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -22,11 +22,14 @@ def predict(model, test_combinations, test_reviews, top_k=10, batch_size=64):
         batch = test_reviews.iloc[start_idx:end_idx]
 
         batch_size = len(batch)  # Assuming batch is a collection like a list or DataFrame
-        comb_features = torch.rand((batch_size, 13), dtype=torch.float32).to(device)
+        comb_features = ["temp"] * len(batch)
 
-        reviews = (batch['review_title'].fillna('') + ' ' +
-               batch['review_positive'].fillna('') + ' ' +
-               batch['review_negative'].fillna('')).tolist()
+        review_scores = [str(element) for element in batch['review_score']]
+
+        reviews =  ('Review title: ' + batch['review_title'].fillna('') + '. ' +
+                    'Review positive: '+ batch['review_positive'].fillna('') + '. ' +
+                    'Review negative: ' + batch['review_negative'].fillna('') + '. ' +
+                    'Review score: ' + review_scores).tolist()
 
         # Forward pass through the model
         _, _, review_embeddings = model(comb_features, reviews)
@@ -48,17 +51,21 @@ def predict(model, test_combinations, test_reviews, top_k=10, batch_size=64):
         batch = test_combinations.iloc[start_idx:end_idx]
 
         # Prepare batch combination features tensor
-        comb_features_vals = [
-            [float(value) if isinstance(value, (int, float)) else 0 for value in row]
-            for row in batch.values
-        ]
-        comb_features = torch.tensor(comb_features_vals, dtype=torch.float32).to(device)
+        room_nights = [str(element) for element in batch['room_nights']]
+        month = [str(element) for element in batch['month']]
+        comb_features = (('Guest type: ' + batch['guest_type'].fillna('') + '. ' +
+                            'Guest country: ' + batch['guest_country'].fillna('') + '. ' +
+                            'Room nights: ' + room_nights + '. ' +
+                            'Month: ' + month + '. ' +
+                            'Accommodation type: ' + batch['accommodation_type'].fillna('') + '. ' +
+                            'Accommodation country: ' +  batch['accommodation_country'].fillna(''))
+                            .tolist())
 
         # Dummy reviews placeholder for the batch
         reviews = ["dummy review"] * len(batch)
 
         # Forward pass through the model
-        scaled_similarities, user_embeddings_batch, review_embeddings = model(comb_features, reviews)
+        _, user_embeddings_batch, _ = model(comb_features, reviews)
 
         # Save user embeddings to the dictionary
         for i, user_id in enumerate(batch['user_id']):
