@@ -14,10 +14,10 @@ class ContrastiveSentenceTransformerModel(nn.Module):
         # Optionally enable fine-tuning for SentenceTransformer models
         if fine_tune_transformers:
             for param in self.context_transformer.parameters():
-                param.requires_grad = True
+                param.requires_grad = False
 
             for param in self.review_transformer.parameters():
-                param.requires_grad = True
+                param.requires_grad = False
 
         # Fine-tuning layers for embeddings
         embedding_dim = self.context_transformer.get_sentence_embedding_dimension()

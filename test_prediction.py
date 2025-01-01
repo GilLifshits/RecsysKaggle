@@ -24,7 +24,6 @@ def predict(model, test_combinations, test_reviews, top_k=10, batch_size=64):
         batch_size = len(batch)  # Assuming batch is a collection like a list or DataFrame
         comb_features = torch.rand((batch_size, 13), dtype=torch.float32).to(device)
 
-        # reviews = [row for row in batch["review_positive"]]
         reviews = (batch['review_title'].fillna('') + ' ' +
                batch['review_positive'].fillna('') + ' ' +
                batch['review_negative'].fillna('')).tolist()

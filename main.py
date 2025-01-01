@@ -39,7 +39,7 @@ def save_model(model, path="trained_model.pth"):
 
 def load_model(model_class, model_path="trained_model.pth", device="cpu"):
     """Load a model from a local file."""
-    model = model_class(model_path).to(device)
+    model = model_class("sentence_transformer_model/").to(device)
     model.load_state_dict(torch.load(model_path, map_location=device))
     print(f"Model loaded from {model_path}")
     return model
@@ -57,16 +57,16 @@ def train_contrastive_model(device, train_users, train_reviews, train_matches):
     )
 
     # Initialize model, criterion, optimizer
-    model_path = "path"
+    model_path = "sentence_transformer_model/"
     model = ContrastiveSentenceTransformerModel(model_path).to(device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=3e-5, weight_decay=0.01)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-2, weight_decay=0.01)
 
     # Learning rate scheduler for warm-up
     total_steps = len(train_loader) * 7  # Total steps for 7 epochs
     warmup_steps = int(total_steps * 0.05)
     scheduler = torch.optim.lr_scheduler.LinearLR(
         optimizer,
-        start_factor=0.0,
+        start_factor=0.01,
         end_factor=1.0,
         total_iters=warmup_steps
     )
@@ -95,16 +95,14 @@ def run_inference(trained_model, test_users, test_reviews):
 
 def main():
 
+    frac_of_train_set = 0.1
+    only_inference = True
+
     # Initialize device
     device = initialize_device()
 
-    frac_of_train_set = 0.1
-
     # Load data
     train_users, train_reviews, train_matches, val_users, val_reviews, val_matches, test_users, test_reviews = prepare_data(frac_of_train_set)
-
-    # Choose mode (training or inference)
-    only_inference = True
 
     if not only_inference:
         # Train the model
