@@ -65,18 +65,3 @@ def custom_collate_fn(batch):
         'review_content': review_content
     }
 
-    # for item in batch:
-    #     features = []
-    #     for value in item['user_features'].values():
-    #         try:
-    #             features.append(float(value))
-    #         except ValueError:
-    #             features.append(0)
-    #     user_features.append(features)
-    #     review_content.append(item['review_content'])
-    #
-    # user_features_tensor = torch.tensor(user_features, dtype=torch.float32)
-    # return {
-    #     'user_features': user_features_tensor,
-    #     'review_content': review_content
-    # }

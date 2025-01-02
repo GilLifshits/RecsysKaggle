@@ -1,13 +1,11 @@
 import pandas as pd
 import torch
-from tqdm import tqdm
-import torch.nn as nn
 import torch.nn.functional as F
+from tqdm import tqdm
 
 
 @torch.no_grad()
 def predict(model, test_combinations, test_reviews, top_k=10, batch_size=64):
-
     model.eval()
 
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -26,10 +24,10 @@ def predict(model, test_combinations, test_reviews, top_k=10, batch_size=64):
 
         review_scores = [str(element) for element in batch['review_score']]
 
-        reviews =  ('Review title: ' + batch['review_title'].fillna('') + '. ' +
-                    'Review positive: '+ batch['review_positive'].fillna('') + '. ' +
-                    'Review negative: ' + batch['review_negative'].fillna('') + '. ' +
-                    'Review score: ' + review_scores).tolist()
+        reviews = ('Review title: ' + batch['review_title'].fillna('') + '. ' +
+                   'Review positive: ' + batch['review_positive'].fillna('') + '. ' +
+                   'Review negative: ' + batch['review_negative'].fillna('') + '. ' +
+                   'Review score: ' + review_scores).tolist()
 
         # Forward pass through the model
         _, _, review_embeddings = model(comb_features, reviews)
@@ -37,7 +35,6 @@ def predict(model, test_combinations, test_reviews, top_k=10, batch_size=64):
         # Save user embeddings to the dictionary
         for i, review_id in enumerate(batch['review_id']):
             review_embeddings_dict[review_id] = review_embeddings[i].cpu().numpy()
-
 
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -54,12 +51,12 @@ def predict(model, test_combinations, test_reviews, top_k=10, batch_size=64):
         room_nights = [str(element) for element in batch['room_nights']]
         month = [str(element) for element in batch['month']]
         comb_features = (('Guest type: ' + batch['guest_type'].fillna('') + '. ' +
-                            'Guest country: ' + batch['guest_country'].fillna('') + '. ' +
-                            'Room nights: ' + room_nights + '. ' +
-                            'Month: ' + month + '. ' +
-                            'Accommodation type: ' + batch['accommodation_type'].fillna('') + '. ' +
-                            'Accommodation country: ' +  batch['accommodation_country'].fillna(''))
-                            .tolist())
+                          'Guest country: ' + batch['guest_country'].fillna('') + '. ' +
+                          'Room nights: ' + room_nights + '. ' +
+                          'Month: ' + month + '. ' +
+                          'Accommodation type: ' + batch['accommodation_type'].fillna('') + '. ' +
+                          'Accommodation country: ' + batch['accommodation_country'].fillna(''))
+                         .tolist())
 
         # Dummy reviews placeholder for the batch
         reviews = ["dummy review"] * len(batch)
@@ -109,5 +106,3 @@ def predict(model, test_combinations, test_reviews, top_k=10, batch_size=64):
     result_df.insert(0, "ID", range(1, len(result_df) + 1))
 
     return result_df
-
-

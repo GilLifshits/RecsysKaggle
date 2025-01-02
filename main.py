@@ -95,8 +95,14 @@ def run_inference(trained_model, test_users, test_reviews):
 
 def main():
 
+    # TODO: negative sample batches: for each positive, create negative from same accommodation.
+    #  - using dataframes and use the same dataloader for each one.
+    # TODO: more training data -> 0.2 (they used 100 accommodation ids)
+    # TODO: try adding another FC layer
+    # TODO: try FT on embedders
+
     frac_of_train_set = 0.1
-    only_inference = True
+    only_inference = False
 
     # Initialize device
     device = initialize_device()

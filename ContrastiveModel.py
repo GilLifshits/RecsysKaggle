@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from sentence_transformers import SentenceTransformer
+import torch.nn.functional as F
 
 
 class ContrastiveSentenceTransformerModel(nn.Module):
@@ -48,13 +49,16 @@ class ContrastiveSentenceTransformerModel(nn.Module):
         review_embeddings = torch.relu(self.fc_review(review_embeddings))
 
         # Normalize embeddings for numerical stability
-        context_embeddings = nn.functional.normalize(context_embeddings, p=2, dim=1)
-        review_embeddings = nn.functional.normalize(review_embeddings, p=2, dim=1)
+        context_embeddings = F.normalize(context_embeddings, p=2, dim=1)
+        review_embeddings = F.normalize(review_embeddings, p=2, dim=1)
 
-        # Compute dot product similarity
-        dot_product = torch.sum(context_embeddings * review_embeddings, dim=1)
+        # # Compute dot product similarity
+        # dot_product = torch.sum(context_embeddings * review_embeddings, dim=1)
 
-        # Apply sigmoid for bounded similarity
-        similarity = self.sigmoid(dot_product)
+        # # Apply sigmoid for bounded similarity
+        # similarity = self.sigmoid(dot_product)
+
+        # Calculate cosine similarity
+        similarity = F.cosine_similarity(context_embeddings, review_embeddings, dim=1)
 
         return similarity, context_embeddings, review_embeddings
