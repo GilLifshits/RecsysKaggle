@@ -44,17 +44,8 @@ def load_model(model_class, model_path="trained_model.pth", device="cpu"):
     print(f"Model loaded from {model_path}")
     return model
 
-def train_contrastive_model(device, train_users, train_reviews, train_matches):
+def train_contrastive_model(batch_size, device, train_users, train_reviews, train_matches, accommodation_amount):
     """Train the contrastive model."""
-    # Prepare dataset and dataloader
-    train_dataset = ReviewDataset(train_users, train_reviews, train_matches)
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=64,
-        shuffle=True,
-        collate_fn=custom_collate_fn,
-        pin_memory=(device == 'cuda')
-    )
 
     # Initialize model, criterion, optimizer
     model_path = "sentence_transformer_model/"
@@ -62,7 +53,7 @@ def train_contrastive_model(device, train_users, train_reviews, train_matches):
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-2, weight_decay=0.01)
 
     # Learning rate scheduler for warm-up
-    total_steps = len(train_loader) * 7  # Total steps for 7 epochs
+    total_steps = (len(train_users)/batch_size) * 7  # Total steps for 7 epochs
     warmup_steps = int(total_steps * 0.05)
     scheduler = torch.optim.lr_scheduler.LinearLR(
         optimizer,
@@ -71,18 +62,22 @@ def train_contrastive_model(device, train_users, train_reviews, train_matches):
         total_iters=warmup_steps
     )
 
+    all_accommodation_ids = train_users["accommodation_id"].unique().tolist()
+
     # Train model
     epochs = 7
     for epoch in range(epochs):
         print(f"Epoch {epoch + 1}/{epochs}")
-        epoch_loss, trained_model = train_model(
-            train_loader=train_loader,
+        trained_model = train_model(
+            batch_size=batch_size,
             model=model,
             optimizer=optimizer,
             scheduler=scheduler,
-            device=device
+            device=device,
+            all_accommodation_ids=all_accommodation_ids,
+            accommodation_amount=accommodation_amount
         )
-        print(f"  --> Epoch {epoch + 1} Loss: {epoch_loss:.4f}\n")
+        print(f"  --> Epoch {epoch + 1} \n")
 
     save_model(trained_model)
     return trained_model
@@ -95,13 +90,13 @@ def run_inference(trained_model, test_users, test_reviews):
 
 def main():
 
-    # TODO: negative sample batches: for each positive, create negative from same accommodation.
-    #  - using dataframes and use the same dataloader for each one.
     # TODO: more training data -> 0.2 (they used 100 accommodation ids)
     # TODO: try adding another FC layer
     # TODO: try FT on embedders
 
     frac_of_train_set = 0.1
+    batch_size = 8
+    accommodation_amount = 1000
     only_inference = False
 
     # Initialize device
@@ -112,7 +107,9 @@ def main():
 
     if not only_inference:
         # Train the model
-        trained_model = train_contrastive_model(device=device, train_users=train_users, train_reviews=train_reviews, train_matches=train_matches)
+        trained_model = train_contrastive_model(batch_size=batch_size, device=device,
+                                                train_users=train_users, train_reviews=train_reviews, train_matches=train_matches,
+                                                accommodation_amount=accommodation_amount)
     else:
         # Load pre-trained model for inference
         model_path = "trained_model.pth"
