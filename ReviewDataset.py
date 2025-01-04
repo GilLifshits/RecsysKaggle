@@ -33,18 +33,18 @@ class ReviewDataset(Dataset):
         review_content = self.reviews[self.reviews['review_id'] == review_id].iloc[0]
 
         # user features textual representation
-        user_features_textual_representation = (f"Guest type: {user_features['guest_type']} "
-                                         f"Guest country: {user_features['guest_country']} "
-                                         f"Room nights: {user_features['room_nights']} "
-                                         f"Month: {user_features['month']} "
-                                         f"Accommodation type: {user_features['accommodation_type']} "
-                                         f"Accommodation country: {user_features['accommodation_country']}")
+        user_features_textual_representation = (f"Guest type: {user_features['guest_type']} ."
+                                         f"Guest country: {user_features['guest_country']} ."
+                                         f"Room nights: {user_features['room_nights']} ."
+                                         f"Month: {user_features['month']} ."
+                                         f"Accommodation type: {user_features['accommodation_type']} ."
+                                         f"Accommodation country: {user_features['accommodation_country']}.")
 
         # Review textual representation
-        review_textual_representation = (f"Review title: {review_content['review_title']} "
-                                         f"Review positive: {review_content['review_positive']} "
-                                         f"Review negative: {review_content['review_negative']} "
-                                         f"Review score: {review_content['review_score']}")
+        review_textual_representation = (f"Review title: {review_content['review_title']} ."
+                                         f"Review positive: {review_content['review_positive']} ."
+                                         f"Review negative: {review_content['review_negative']} ."
+                                         f"Review score: {review_content['review_score']}.")
 
         return {
             'user_features': user_features_textual_representation,
