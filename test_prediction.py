@@ -2,11 +2,15 @@ import pandas as pd
 import torch
 import torch.nn.functional as F
 from tqdm import tqdm
+from transformers import AutoTokenizer
 
 
 @torch.no_grad()
-def predict(model, test_combinations, test_reviews, top_k=10, batch_size=64):
-    model.eval()
+def predict(users_trained_model, reviews_trained_model, test_combinations, test_reviews, top_k=10, batch_size=64):
+    reviews_trained_model.eval()
+    users_trained_model.eval()
+    tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
+    max_seq_len = 64
 
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -20,7 +24,6 @@ def predict(model, test_combinations, test_reviews, top_k=10, batch_size=64):
         batch = test_reviews.iloc[start_idx:end_idx]
 
         batch_size = len(batch)  # Assuming batch is a collection like a list or DataFrame
-        comb_features = ["temp"] * len(batch)
 
         review_scores = [str(element) for element in batch['review_score']]
 
@@ -30,11 +33,14 @@ def predict(model, test_combinations, test_reviews, top_k=10, batch_size=64):
                    'Review score: ' + review_scores).tolist()
 
         # Forward pass through the model
-        _, _, review_embeddings = model(comb_features, reviews)
+        review_content_tok = tokenizer(reviews, padding=True, truncation=True, return_tensors='pt',
+                                       max_length=max_seq_len).to("cuda")
+
+        review_content_embed = reviews_trained_model(review_content_tok)
 
         # Save user embeddings to the dictionary
         for i, review_id in enumerate(batch['review_id']):
-            review_embeddings_dict[review_id] = review_embeddings[i].cpu().numpy()
+            review_embeddings_dict[review_id] = review_content_embed[i].cpu().numpy()
 
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -58,15 +64,13 @@ def predict(model, test_combinations, test_reviews, top_k=10, batch_size=64):
                           'Accommodation country: ' + batch['accommodation_country'].fillna(''))
                          .tolist())
 
-        # Dummy reviews placeholder for the batch
-        reviews = ["dummy review"] * len(batch)
-
-        # Forward pass through the model
-        _, user_embeddings_batch, _ = model(comb_features, reviews)
+        user_features_tok = tokenizer(comb_features, padding=True, truncation=True, return_tensors='pt',
+                                      max_length=max_seq_len).to("cuda")
+        user_features_embed = users_trained_model(user_features_tok)
 
         # Save user embeddings to the dictionary
         for i, user_id in enumerate(batch['user_id']):
-            user_embeddings_dict[user_id] = user_embeddings_batch[i].cpu().numpy()
+            user_embeddings_dict[user_id] = user_features_embed[i].cpu().numpy()
 
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

@@ -2,6 +2,7 @@ import os
 import warnings
 
 import torch
+from transformers import AutoTokenizer
 
 warnings.filterwarnings("ignore", category=UserWarning)
 from ContrastiveModel import ContrastiveSentenceTransformerModel
@@ -43,7 +44,11 @@ def save_model(model, path="trained_model.pth"):
 
 def load_model(model_class, model_path="trained_model.pth", device="cpu"):
     """Load a model from a local file."""
-    model = model_class("sentence_transformer_model/").to(device)
+    embed_size = 512
+    output_embed_size = 128
+    tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
+
+    model = model_class(tokenizer.vocab_size, embed_size, output_embed_size).to(device)
     model.load_state_dict(torch.load(model_path, map_location=device))
     print(f"Model loaded from {model_path}")
     return model
@@ -71,9 +76,9 @@ def train_contrastive_model(batch_size, device, train_users, train_reviews, trai
     return users_model, reviews_model
 
 
-def run_inference(trained_model, test_users, test_reviews):
+def run_inference(users_trained_model, reviews_trained_model, test_users, test_reviews):
     """Run inference on the test set and save predictions to a CSV file."""
-    result_df = predict(trained_model, test_users, test_reviews, batch_size=64)
+    result_df = predict(users_trained_model, reviews_trained_model, test_users, test_reviews, batch_size=64)
     result_df.to_csv("submission.csv", index=False)
     print("Saved predictions to submission.csv")
 
@@ -89,7 +94,7 @@ def main():
     frac_of_train_set = 0.5
     batch_size = 64
     accommodation_amount = 4000
-    only_inference = False
+    only_inference = True
 
     # Initialize device
     device = initialize_device()
@@ -106,18 +111,21 @@ def main():
                                                 accommodation_amount=accommodation_amount)
     else:
         # Load pre-trained model for inference
-        model_path = "trained_model.pth"
-        if os.path.exists(model_path):
-            trained_model = load_model(model_class=ContrastiveSentenceTransformerModel, model_path=model_path,
+        users_model_path = "users_model.pth"
+        reviews_model_path = "reviews_model.pth"
+        if os.path.exists(users_model_path) and os.path.exists(reviews_model_path):
+            users_trained_model = load_model(model_class=ContrastiveSentenceTransformerModel, model_path=users_model_path,
+                                       device=device)
+            reviews_trained_model = load_model(model_class=ContrastiveSentenceTransformerModel, model_path=reviews_model_path,
                                        device=device)
             print("Loaded model")
         else:
-            print(f"Model file {model_path} not found. Please train the model first.")
+            print(f"Model file {users_model_path} or {reviews_model_path} not found. Please train the model first.")
             return
 
     # Predict on the test set
     # The speed of inference is very correlated to type of GPU allocated from BGU cluster
-    run_inference(trained_model, test_users, test_reviews)
+    run_inference(users_trained_model, reviews_trained_model, test_users, test_reviews)
 
 
 if __name__ == "__main__":
