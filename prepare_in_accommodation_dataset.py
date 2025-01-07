@@ -1,10 +1,11 @@
-from main import prepare_data
-import pandas as pd
 import os
+
 from tqdm import tqdm
 
+from main import prepare_data
+
 # Prepare data
-train_users, train_reviews, train_matches, val_users, val_reviews, val_matches, test_users, test_reviews = prepare_data(1)
+train_users, train_reviews, train_matches, val_users, val_reviews, val_matches, test_users, test_reviews = prepare_data()
 
 # Create directory for saving CSVs
 output_dir = "in_accommodation_datasets"
@@ -49,10 +50,3 @@ for accommodation_id, df in tqdm(grouped_train_review_dict.items(), desc="Saving
 for accommodation_id, df in tqdm(grouped_train_matches_dict.items(), desc="Saving train_matches CSVs"):
     df.to_csv(os.path.join(output_dir, f"train_matches_{accommodation_id}.csv"), index=False)
 
-# Example: Accessing a specific accommodation_id DataFrame from train_users
-example_accommodation_id = -1109473678
-train_users_accommodation_df = grouped_train_users_dict.get(example_accommodation_id)
-
-# Print the DataFrame for the example accommodation_id
-print(f"Train Users DataFrame for accommodation_id {example_accommodation_id}:\n")
-print(train_users_accommodation_df)

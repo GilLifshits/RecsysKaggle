@@ -1,4 +1,3 @@
-import torch
 from torch.utils.data import Dataset
 
 
@@ -59,7 +58,6 @@ def custom_collate_fn(batch):
         user_features.append(item['user_features'])
         review_content.append(item['review_content'])
 
-    # user_features_tensor = torch.tensor(user_features, dtype=torch.float32)
     return {
         'user_features': user_features,
         'review_content': review_content

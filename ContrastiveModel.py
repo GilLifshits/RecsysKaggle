@@ -2,9 +2,9 @@ import torch
 import torch.nn as nn
 
 
-class ContrastiveSentenceTransformerModel(nn.Module):
+class ContrastiveTransformerModel(nn.Module):
     def __init__(self, vocab_size, embed_dim, output_embed_dim):
-        super(ContrastiveSentenceTransformerModel, self).__init__()
+        super(ContrastiveTransformerModel, self).__init__()
 
         self.embedding_layer = torch.nn.Embedding(vocab_size, embed_dim)
 
